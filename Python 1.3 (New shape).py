@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import solve_ivp
+from scipy.differentiate import derivative
 import matplotlib.pyplot as plt
 
 #Parameters
@@ -24,36 +25,48 @@ mu_lx = 3      # Linear friction x-axis [N*s/m]
 mu_ly = 3      # Linear friction y-axis [N*s/m]
 
 #Time simulation parameters
-total_time = 3 #Total simulation time [s]
+total_time = 1 #Total simulation time [s]
 step_size = 0.01 #Time step size [s]
 
 #Reference trajectory parameters
 omega = 2*np.pi # Frequency of the reference trajectory [rad/s]
 a = (2/6)*Max_x  # Amplitude of the reference trajectory [m]
-b = (1/6)*Max_y  # Amplitude of the reference trajectory [m]
+b = (2/6)*Max_y  # Amplitude of the reference trajectory [m]
+A = (J_tot)/(K_m*r_m)
+B = mu_r/J_tot + (mu_lx*(r_m**2))/(2*J_tot)
+C = mu_r/J_tot + (mu_ly*(r_m**2))/(2*J_tot)
 
 #Input Voltage Function
 
 def input_voltages(t):
-    A = (J_tot)/(K_m*r_m)
-    B = mu_r/J_tot + (mu_lx*(r_m**2))/(2*J_tot)
+    if (t < total_time/2):
+        omega = 2*np.pi # Frequency of the reference trajectory [rad/s]
+        a = (2/6)*Max_x  # Amplitude of the reference trajectory [m]
+        b = (2/6)*Max_y  # Amplitude of the reference trajectory [m]
+
+    else:
+        omega = 2*np.pi # Frequency of the reference trajectory [rad/s]
+        a = (2/6)*Max_x  # Amplitude of the reference trajectory [m]
+        b = -(1/6)*Max_y  # Amplitude of the reference trajectory [m]
+        
+    
     x_dot_ref = -a * omega * np.sin(omega * t)
     x_dubbeldot_ref = -a * (omega**2) * np.cos(omega * t)
     x_triple_dot_ref = a * (omega**3) * np.sin(omega * t)
 
-    i_mx_ref = A*(x_dubbeldot_ref - B*x_dot_ref)
-    i_mx_dot_ref = A*(x_triple_dot_ref - B*x_dubbeldot_ref)
+    i_mx_ref = A*(x_dubbeldot_ref + B*x_dot_ref)
+    i_mx_dot_ref = A*(x_triple_dot_ref + B*x_dubbeldot_ref)
 
     y_dot_ref = b * omega * np.cos(omega * t)
     y_dubbeldot_ref = -b * (omega**2) * np.sin(omega * t)
     y_triple_dot_ref = -b * (omega**3) * np.cos(omega * t)
 
-    i_my_ref = A*(y_dubbeldot_ref - B*y_dot_ref)
-    i_my_dot_ref = A*(y_triple_dot_ref - B*y_dubbeldot_ref)
+    i_my_ref = A*(y_dubbeldot_ref + C*y_dot_ref)
+    i_my_dot_ref = A*(y_triple_dot_ref + C*y_dubbeldot_ref)
     
 
-    u_mx = L_m*i_my_dot_ref + R_m*i_my_ref + (K_m/r_m)*y_dot_ref
-    u_my = L_m*i_mx_dot_ref + R_m*i_mx_ref + (K_m/r_m)*x_dot_ref
+    u_mx = L_m*i_mx_dot_ref + R_m*i_mx_ref + (K_m/r_m)*x_dot_ref
+    u_my = L_m*i_my_dot_ref + R_m*i_my_ref + (K_m/r_m)*y_dot_ref
 
     return u_mx, u_my
 
@@ -93,7 +106,7 @@ def state_space(t, z):
     ]
 
 #Solve ODE's
-x0 = [Max_x/2, 0.0, Max_y/2 + b, 0.0, 0.0, 0.0]
+x0 = [Max_x/2 + a, 0.0, Max_y/2, 0.0, 0.0, 0.0]
 t_span = (0.0, total_time)
 t_eval = np.linspace(t_span[0], t_span[1], int(total_time/step_size))
 
@@ -104,8 +117,9 @@ sol = solve_ivp(
     t_eval=t_eval
 )
 
+'''
 #Plots
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(10, 10))
 
 # Motor Currents
 plt.subplot(3, 1, 1)
@@ -123,10 +137,13 @@ plt.xlabel('Time [s]')
 plt.ylabel('Position [m]')
 plt.grid(True)
 plt.legend()
-
+'''
 #Tool position (x, y)
-plt.subplot(3, 1, 3)
+ax3 = plt.subplot(1, 1, 1)
 plt.plot(sol.y[0], sol.y[2], label='Tool Head Path')
+plt.xlim(0, Max_x)
+plt.ylim(0, Max_y)
+ax3.set_box_aspect(1)
 plt.xlabel('Position X [m]')
 plt.ylabel('Position Y [m]')
 plt.grid(True)
