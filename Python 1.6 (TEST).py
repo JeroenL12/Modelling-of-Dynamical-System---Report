@@ -81,6 +81,7 @@ while (n < N or T_dif > Biggest_difference):
         limit = n
         if n == N:
             a=1
+            print_time = t
     else:
         a = 0
         limit = N
@@ -94,4 +95,6 @@ while (n < N or T_dif > Biggest_difference):
         print("Error: Maximum number of elements exceeded 10000. Stopping simulation.")
         break
 
-print("Total printing time: {:.2f} seconds".format(t))
+print("Total time: ", t, "seconds")
+print("Total printing time:", print_time, "seconds")
+print("Total cooling time: ", t-print_time, "seconds")
