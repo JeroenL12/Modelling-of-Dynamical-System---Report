@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # Geometry & Printing
 H = 0.0004               # Filament height and width (m)
 L_total = 0.5            # Total length of the ellipse (m)
-v_print = 0.03           # Printing speed (m/s) -> 30 mm/s
+v_print = 0.03           # Printing speed (m/s)
 
 # Thermal properties (PLA)
 rho = 1240.0             # Density (kg/m^3)
@@ -22,27 +22,24 @@ T_env = 20.0
 # Heat transfer coefficients
 h_plate = 150.0          # To the heated base plate (W/m^2*K)
 h_air = 15.0             # To ambient air across 3 sides (W/m^2*K)
-c1 = h_plate/(rho*cp*H)
-c2 = 3*h_air/(rho*cp*H)
+c1 = h_plate/(rho*cp*H)  # Coefficient 1
+c2 = 3*h_air/(rho*cp*H)  # Coefficient 2
 
 
 #Time
 N = 1000                 # Number of elements dividing the circle
-ds = L_total/N        # Length of 1 element (m)
-
-
-dt = ds/v_print        # Time to print 1 element (s)
-t_extra = 5.0            # Extra cooling time after printing (s)
-steps_extra = int(t_extra / dt)
+ds = L_total/N           # Length of 1 element (m)
+dt = ds/v_print          # Time to print 1 element (s)           
 
 #Starting conditions and stopping conditions
-n = 0           #Starting element
-t = 0.0          #Starting time (s)
-Biggest_difference = 0.5 #(°C)
-T_list = [T_env]*(N)  # Starting temperatures list (°C)
-T_dif = max(T_list) - min(T_list) #Starting difference (°C)
-a = 0 #state that last element is equal to nozzle when n=N
+n = 0                    #Starting element
+t = 0.0                  #Starting time (s)
+T_dif_allowed = 0.5      #(°C)
+T_list = [0]*(N)         # Starting temperatures list (°C)
+T_dif = 0                #Starting difference (°C)
+a = 0                    #state that print is at last element (Print finished)
 
+#Function for updating tempratures along the whole printed length
 def update_Tempratures():
     for i in range(limit):
         
@@ -73,7 +70,7 @@ def update_Tempratures():
         T_list[i] = T_list_old[i] + (alpha*((T_left - 2*T_list_old[i] + T_right)/(ds**2)) + c1*(T_plate - T_list_old[i]) + c2*(T_env - T_list_old[i]))*dt
 
 #Loop for finishing the whole print and checking if the difference is below a certain threshold
-while (n < N or T_dif > Biggest_difference):
+while (n < N or T_dif > T_dif_allowed):
     T_list_old = T_list.copy()
     
     if (n < N):
@@ -81,20 +78,23 @@ while (n < N or T_dif > Biggest_difference):
         limit = n
         if n == N:
             a=1
-            print_time = t
+            
     else:
         a = 0
         limit = N
     
     t += dt
+    if a == 1:
+        print_time = t
 
     update_Tempratures()
     T_dif = max(T_list) - min(T_list)
-    
+
+    #If t becomes to big stop simulation
     if t > 10**4:
-        print("Error: Maximum number of elements exceeded 10000. Stopping simulation.")
+        print("Error: Maximum number of seconds exceeded 10000 (2.8 hours). Stopping simulation.")
         break
 
-print("Total time: ", t, "seconds")
-print("Total printing time:", print_time, "seconds")
-print("Total cooling time: ", t-print_time, "seconds")
+print("Total time: ", round(t, 4), "seconds")
+print("Total printing time:", round(print_time, 4), "seconds")
+print("Total cooling time: ", round(t-print_time, 4), "seconds")
