@@ -27,7 +27,7 @@ c2 = 3*h_air/(rho*cp*H)
 
 
 #Time
-N = 100                 # Number of elements dividing the circle
+N = 1000                 # Number of elements dividing the circle
 ds = L_total/N        # Length of 1 element (m)
 
 
@@ -38,7 +38,7 @@ steps_extra = int(t_extra / dt)
 #Starting conditions and stopping conditions
 n = 0           #Starting element
 t = 0.0          #Starting time (s)
-Biggest_difference = 5 #(°C)
+Biggest_difference = 0.5 #(°C)
 T_list = [T_env]*(N)  # Starting temperatures list (°C)
 T_dif = max(T_list) - min(T_list) #Starting difference (°C)
 a = 0 #state that last element is equal to nozzle when n=N
@@ -47,7 +47,7 @@ def update_Tempratures():
     for i in range(limit):
         
         if (i == 0 and n < N and n != 1):
-            T_left = T_env
+            T_left = T_list_old[i]
             T_right = T_list_old[i+1]
 
         elif (i == 0 and n == N):
@@ -72,7 +72,7 @@ def update_Tempratures():
         
         T_list[i] = T_list_old[i] + (alpha*((T_left - 2*T_list_old[i] + T_right)/(ds**2)) + c1*(T_plate - T_list_old[i]) + c2*(T_env - T_list_old[i]))*dt
 
-
+#Loop for finishing the whole print and checking if the difference is below a certain threshold
 while (n < N or T_dif > Biggest_difference):
     T_list_old = T_list.copy()
     
@@ -94,5 +94,4 @@ while (n < N or T_dif > Biggest_difference):
         print("Error: Maximum number of elements exceeded 10000. Stopping simulation.")
         break
 
-print(T_list)
 print("Total printing time: {:.2f} seconds".format(t))
